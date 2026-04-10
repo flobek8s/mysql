@@ -1,2 +1,3 @@
 /templates/mysql-temp-secrets.yaml
 /templates/sealed-secret-mysql_old.yaml
+/templates/storageclass.yaml

@@ -1,0 +1,89 @@
+name: deploy-mysql-stack
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'templates/**'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [flobek8s-runners]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply ArgoCD app
+        run: kubectl apply -f argocd/argocd.yaml
+
+      - name: Create namespace
+        run: kubectl apply -f templates/namespace.yaml
+
+      - name: Configure TLS secret reflection
+        run: |
+          # Get current reflection namespaces and add database if not already there
+          CURRENT=$(kubectl get secret wildcard-phink8s.com-tls -n traefik \
+            -o jsonpath='{.metadata.annotations.reflector\.v1\.k8s\.emberstack\.com/reflection-allowed-namespaces}' \
+            2>/dev/null || echo "")
+
+          if echo "$CURRENT" | grep -q "database"; then
+            echo "database already in reflection namespaces, skipping"
+          else
+            # Append database to existing namespaces
+            if [ -z "$CURRENT" ]; then
+              NEW_NS="database"
+            else
+              NEW_NS="${CURRENT},database"
+            fi
+
+            kubectl patch secret wildcard-phink8s.com-tls -n traefik \
+              --type=merge \
+              -p "{
+                \"metadata\": {
+                  \"annotations\": {
+                    \"reflector.v1.k8s.emberstack.com/reflection-allowed\": \"true\",
+                    \"reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces\": \"${NEW_NS}\",
+                    \"reflector.v1.k8s.emberstack.com/reflection-auto-enabled\": \"true\",
+                    \"reflector.v1.k8s.emberstack.com/reflection-auto-namespaces\": \"${NEW_NS}\"
+                  }
+                }
+              }"
+            echo "Added database to reflection namespaces: ${NEW_NS}"
+          fi
+
+          # Wait for the reflected secret to appear
+          echo "Waiting for TLS secret to reflect into database..."
+          for i in $(seq 1 20); do
+            if kubectl get secret wildcard-phink8s.com-tls -n database > /dev/null 2>&1; then
+              echo "TLS secret reflected successfully"
+              break
+            fi
+            echo "Attempt $i/20 - waiting..."
+            sleep 3
+          done
+          kubectl get secret wildcard-phink8s.com-tls -n database \
+            || { echo "TLS secret never appeared in database"; exit 1; }
+
+      - name: Wait for ArgoCD sync
+        run: |
+          echo "Waiting for ArgoCD to sync..."
+          for i in $(seq 1 30); do
+            STATUS=$(kubectl get application mysql -n argocd \
+              -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "NotFound")
+            HEALTH=$(kubectl get application mysql -n argocd \
+              -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown")
+            echo "Attempt $i/30 - Sync: $STATUS Health: $HEALTH"
+            if [ "$STATUS" = "Synced" ] && [ "$HEALTH" = "Healthy" ]; then
+              echo "MySQL stack deployed successfully"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for ArgoCD sync"
+          exit 1

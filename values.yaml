@@ -1,0 +1,35 @@
+namespace: database
+
+mysql:
+  image:
+    repository: mysql
+    tag: "8.0.40"
+  port: 3306
+  database: appdb
+  user: appuser
+  storage: 10Gi
+  storageClass: nfs-csi-mysql
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+
+phpmyadmin:
+  image:
+    repository: phpmyadmin
+    tag: "5.2.1"
+  port: 80
+  host: mysql.phink8s.com
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+ingress:
+  className: traefik

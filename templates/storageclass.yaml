@@ -4,7 +4,7 @@ metadata:
   name: nfs-csi-mysql
 provisioner: nfs.csi.k8s.io
 parameters:
-  server: "192.168.1.50"
+  server: "192.168.20.47"
   share: "/srv/k8s"
   subDir: "mysql"
   mountPermissions: "0777"

@@ -24,7 +24,7 @@ spec:
             - containerPort: {{ .Values.phpmyadmin.port }}
           env:
             - name: PMA_HOST
-              value: mysql
+              value: mysql.database.svc.cluster.local
             - name: PMA_PORT
               value: {{ .Values.mysql.port | quote }}
             - name: MYSQL_ROOT_PASSWORD

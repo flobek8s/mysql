@@ -22,8 +22,8 @@ jobs:
       - name: Apply ArgoCD app
         run: kubectl apply -f argocd/argocd.yaml
 
-      - name: Create namespace
-        run: kubectl apply -f templates/namespace.yaml
+      # - name: Create namespace
+      #   run: kubectl apply -f templates/namespace.yaml
 
       - name: Configure TLS secret reflection
         run: |

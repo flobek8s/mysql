@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: phpmyadmin
   namespace: {{ .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
   labels:
     app: phpmyadmin
 spec:

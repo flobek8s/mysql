@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: mysql-data
   namespace: {{ .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1" 
 spec:
   accessModes:
     - ReadWriteOnce

@@ -5,7 +5,7 @@ metadata:
 provisioner: nfs.csi.k8s.io
 parameters:
   server: "192.168.1.50"
-  share: "/srv/nfs/k8s"
+  share: "/srv/k8s"
   subDir: "mysql"
   mountPermissions: "0777"
 reclaimPolicy: Retain
